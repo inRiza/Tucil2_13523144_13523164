@@ -22,15 +22,21 @@ public class ImageUtils {
 
     public static BufferedImage reconstructImage(QuadTreeNode root, int width, int height) {
         BufferedImage outputImage = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
-        renderQuadTree(outputImage, root);
+        if (root != null) {
+            renderQuadTree(outputImage, root);
+        }
         return outputImage;
     }
 
     private static void renderQuadTree(BufferedImage image, QuadTreeNode node) {
+        if (node == null) {
+            return;
+        }
+
         if (node.isLeaf()) {
             int rgb = (node.r << 16) | (node.g << 8) | node.b;
-            for (int y = node.y; y < node.y + node.height; y++) {
-                for (int x = node.x; x < node.x + node.width; x++) {
+            for (int y = node.y; y < Math.min(node.y + node.height, image.getHeight()); y++) {
+                for (int x = node.x; x < Math.min(node.x + node.width, image.getWidth()); x++) {
                     image.setRGB(x, y, rgb);
                 }
             }

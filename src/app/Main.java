@@ -8,8 +8,8 @@ import java.util.Scanner;
 
 public class Main {
     // Direktori tetap untuk input/output
-    private static final String INPUT_DIR = "test/input/";
-    private static final String OUTPUT_DIR = "test/output/";
+    // private static final String INPUT_DIR = "test/input/";
+    // private static final String OUTPUT_DIR = "test/output/";
 
     public static void main(String[] args) {
         Scanner scanner = new Scanner(System.in);
@@ -20,7 +20,7 @@ public class Main {
             // 1. Input nama file (tanpa path)
             System.out.print("\nMasukkan nama file gambar (contoh: test.jpg): ");
             String filename = scanner.nextLine();
-            File inputFile = new File(INPUT_DIR + filename);
+            File inputFile = new File(filename);
 
             // Validasi file exist
             if (!inputFile.exists()) {
@@ -44,8 +44,10 @@ public class Main {
             BufferedImage image = ImageUtils.readImage(inputFile.getAbsolutePath());
 
             // Buat nama output otomatis
-            String outputFilename = "compressed_" + filename;
-            File outputFile = new File(OUTPUT_DIR + outputFilename);
+            System.out.print("\nMasukkan alamat absolut keluaran file gambar: ");
+            scanner.nextLine();
+            String outputFilename = scanner.nextLine();
+            File outputFile = new File(outputFilename, "compressed_1.jpg");
 
             // Proses kompresi
             QuadTreeNode root = new QuadTreeNode(0, 0, image.getWidth(), image.getHeight());

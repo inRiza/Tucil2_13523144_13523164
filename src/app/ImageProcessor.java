@@ -6,8 +6,8 @@ public class ImageProcessor {
     public void compress(QuadTreeNode node, BufferedImage image,
             double threshold, int minBlockSize) {
         if (shouldSplit(node, image, threshold, minBlockSize)) {
-            int halfWidth = node.width / 2;
-            int halfHeight = node.height / 2;
+            int halfWidth = (int) Math.ceil(node.width / 2.0);
+            int halfHeight = (int) Math.ceil(node.height / 2.0);
 
             node.children[0] = new QuadTreeNode(node.x, node.y, halfWidth, halfHeight);
             node.children[1] = new QuadTreeNode(node.x + halfWidth, node.y, halfWidth, halfHeight);
@@ -22,8 +22,7 @@ public class ImageProcessor {
         }
     }
 
-    private boolean shouldSplit(QuadTreeNode node, BufferedImage image,
-            double threshold, int minBlockSize) {
+    private boolean shouldSplit(QuadTreeNode node, BufferedImage image, double threshold, int minBlockSize) {
         if (node.width <= minBlockSize || node.height <= minBlockSize) {
             return false;
         }
@@ -36,8 +35,8 @@ public class ImageProcessor {
         double sumSqR = 0, sumSqG = 0, sumSqB = 0;
         int pixelCount = node.width * node.height;
 
-        for (int y = node.y; y < node.y + node.height; y++) {
-            for (int x = node.x; x < node.x + node.width; x++) {
+        for (int y = node.y; y < Math.min(node.y + node.height, image.getHeight()); y++) {
+            for (int x = node.x; x < Math.min(node.x + node.width, image.getWidth()); x++) {
                 int rgb = image.getRGB(x, y);
                 int r = (rgb >> 16) & 0xFF;
                 int g = (rgb >> 8) & 0xFF;
@@ -61,19 +60,23 @@ public class ImageProcessor {
 
     private void calculateAverageColor(QuadTreeNode node, BufferedImage image) {
         long sumR = 0, sumG = 0, sumB = 0;
-        int pixelCount = node.width * node.height;
+        int pixelCount = 0;
 
-        for (int y = node.y; y < node.y + node.height; y++) {
-            for (int x = node.x; x < node.x + node.width; x++) {
+        for (int y = node.y; y < Math.min(node.y + node.height, image.getHeight()); y++) {
+            for (int x = node.x; x < Math.min(node.x + node.width, image.getWidth()); x++) {
                 int rgb = image.getRGB(x, y);
                 sumR += (rgb >> 16) & 0xFF;
                 sumG += (rgb >> 8) & 0xFF;
                 sumB += rgb & 0xFF;
+                pixelCount++;
             }
         }
 
-        node.r = (int) (sumR / pixelCount);
-        node.g = (int) (sumG / pixelCount);
-        node.b = (int) (sumB / pixelCount);
+        if (pixelCount > 0) {
+            node.r = (int) (sumR / pixelCount);
+            node.g = (int) (sumG / pixelCount);
+            node.b = (int) (sumB / pixelCount);
+        }
+
     }
 }
