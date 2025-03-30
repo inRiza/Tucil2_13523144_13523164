@@ -4,8 +4,8 @@ import java.awt.image.BufferedImage;
 
 public class ImageProcessor {
     public void compress(QuadTreeNode node, BufferedImage image,
-            double threshold, int minBlockSize) {
-        if (shouldSplit(node, image, threshold, minBlockSize)) {
+            double threshold, int minBlockSize, int method) {
+        if (shouldSplit(node, image, threshold, minBlockSize, method)) {
             int halfWidth = (int) Math.ceil(node.width / 2.0);
             int halfHeight = (int) Math.ceil(node.height / 2.0);
 
@@ -15,18 +15,25 @@ public class ImageProcessor {
             node.children[3] = new QuadTreeNode(node.x + halfWidth, node.y + halfHeight, halfWidth, halfHeight);
 
             for (QuadTreeNode child : node.children) {
-                compress(child, image, threshold, minBlockSize);
+                compress(child, image, threshold, minBlockSize, method);
             }
         } else {
             calculateAverageColor(node, image);
         }
     }
 
-    private boolean shouldSplit(QuadTreeNode node, BufferedImage image, double threshold, int minBlockSize) {
+    private boolean shouldSplit(QuadTreeNode node, BufferedImage image, double threshold, int minBlockSize, int method) {
         if (node.width <= minBlockSize || node.height <= minBlockSize) {
             return false;
         }
-        double error = ErrorMeasurement.Variance(node, image);
+        double error;
+        switch (method) {
+            case 1 -> {error = ErrorMeasurement.Variance(node, image); break;}
+            case 2 -> {error = ErrorMeasurement.MeanAbsoluteDeviation(node, image); break;}
+            case 3 -> {error = ErrorMeasurement.MaxPixelDifference(node, image); break;}
+            case 4 -> {error = ErrorMeasurement.Entropy(node, image); break;}
+            default -> {error = ErrorMeasurement.Variance(node, image); break;}
+        }
         return error > threshold;
     }
 

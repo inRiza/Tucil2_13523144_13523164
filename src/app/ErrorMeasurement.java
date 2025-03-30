@@ -69,7 +69,7 @@ public class ErrorMeasurement {
     public static double Entropy(QuadTreeNode node, BufferedImage image) {
         @SuppressWarnings("unchecked")
         HashMap<Integer, Double>[] probs = (HashMap<Integer, Double>[]) new HashMap[3];
-        for (int i=0; i<2; i++) {
+        for (int i=0; i<3; i++) {
             probs[i] = new HashMap<>();
         }
         ProbabilityDistribution(node, image, probs);

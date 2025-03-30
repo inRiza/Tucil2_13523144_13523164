@@ -4,6 +4,7 @@ import src.app.utils.ImageUtils;
 import src.app.utils.GIFGenerator;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 import java.util.Scanner;
 
 public class Main {
@@ -12,56 +13,68 @@ public class Main {
     // private static final String OUTPUT_DIR = "test/output/";
 
     public static void main(String[] args) {
+        // Clear Terminal
+        try {
+            if (System.getProperty("os.name").contains("Windows")) {
+                new ProcessBuilder("cmd", "/c", "cls").inheritIO().start().waitFor();
+            } else {
+                new ProcessBuilder("clear").inheritIO().start().waitFor();
+            }
+        } catch (IOException | InterruptedException e) {
+            e.printStackTrace();
+        }
+
         Scanner scanner = new Scanner(System.in);
 
         try {
-            System.out.println("=== Program Kompresi Gambar Quadtree ===");
-
+            System.out.println("[=================[ Program Kompresi Gambar Quadtree ]=================]");
+            
             // 1. Input nama file (tanpa path)
-            System.out.print("\nMasukkan nama file gambar (contoh: test.jpg): ");
+            System.out.print("\n[input] Masukkan nama absolute path gambar \n>> ");
             String filename = scanner.nextLine();
             File inputFile = new File(filename);
-
+            
             // Validasi file exist
             if (!inputFile.exists()) {
-                System.err.println("Error: File tidak ditemukan di " + inputFile.getAbsolutePath());
+                System.err.println("[Error] File tidak ditemukan di " + inputFile.getAbsolutePath());
                 return;
             }
 
             // 2. Input parameter kompresi
-            System.out.println("\nPilih metode error:");
-            System.out.println("1. Variance\n2. MAD\n3. Max Pixel Difference\n4. Entropy");
-            System.out.print("Pilihan (1-4): ");
+            System.out.println("\n[input] Pilih metode error: ");
+            System.out.println("\t1. Variance\n\t2. MAD\n\t3. Max Pixel Difference\n\t4. Entropy");
+            System.out.print(">> Pilihan (1-4): ");
             int method = scanner.nextInt();
-
-            System.out.print("\nThreshold error (contoh: 10.0): ");
+            
+            System.out.print("\n[input] Masukkan Threshold error (contoh: 10.0) \n>> ");
             double threshold = scanner.nextDouble();
-
-            System.out.print("Ukuran blok minimum (contoh: 4): ");
+            
+            System.out.print("\n[input] Masukkan Ukuran blok minimum (contoh: 4) \n>> ");
             int minBlockSize = scanner.nextInt();
-
+            
             // 3. Proses gambar
             BufferedImage image = ImageUtils.readImage(inputFile.getAbsolutePath());
-
+            
             // Buat nama output otomatis
-            System.out.print("\nMasukkan alamat absolut keluaran file gambar: ");
+            System.out.print("\n[input] Masukkan alamat absolut output gambar \n>> ");
             scanner.nextLine();
             String outputFilename = scanner.nextLine();
-            File outputFile = new File(outputFilename, "compressed_1.jpg");
-
+            File outputFile = new File(outputFilename);
+            
             // Proses kompresi
             QuadTreeNode root = new QuadTreeNode(0, 0, image.getWidth(), image.getHeight());
-            new ImageProcessor().compress(root, image, threshold, minBlockSize);
+            new ImageProcessor().compress(root, image, threshold, minBlockSize, method);
 
             // Simpan hasil
             BufferedImage compressedImage = ImageUtils.reconstructImage(root, image.getWidth(), image.getHeight());
             ImageUtils.saveImage(compressedImage, outputFile.getAbsolutePath());
-
-            System.out.println("\nKompresi berhasil!");
-            System.out.println("Hasil disimpan di: " + outputFile.getAbsolutePath());
+            
+            System.out.println("\n[output] Kompresi berhasil! Hasil disimpan di:");
+            System.out.println("\t " + outputFile.getAbsolutePath());
+            System.out.println("\n[======================================================================]\n");
 
         } catch (Exception e) {
-            System.err.println("Error: " + e.getMessage());
+            System.err.println("[Error] " + e.getMessage());
         } finally {
             scanner.close();
         }
