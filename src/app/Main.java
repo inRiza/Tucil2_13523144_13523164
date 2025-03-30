@@ -5,6 +5,8 @@ import src.app.utils.GIFGenerator;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Scanner;
 
 public class Main {
@@ -33,6 +35,7 @@ public class Main {
             System.out.print("\n[input] Masukkan nama absolute path gambar \n>> ");
             String filename = scanner.nextLine();
             File inputFile = new File(filename);
+            long inputSize = inputFile.length();
             
             // Validasi file exist
             if (!inputFile.exists()) {
@@ -62,14 +65,26 @@ public class Main {
             File outputFile = new File(outputFilename);
             
             // Proses kompresi
+            Instant startTime = Instant.now();
             QuadTreeNode root = new QuadTreeNode(0, 0, image.getWidth(), image.getHeight());
             new ImageProcessor().compress(root, image, threshold, minBlockSize, method);
+            Instant endTime = Instant.now();
+            Duration duration = Duration.between(startTime, endTime);
 
             // Simpan hasil
             BufferedImage compressedImage = ImageUtils.reconstructImage(root, image.getWidth(), image.getHeight());
             ImageUtils.saveImage(compressedImage, outputFile.getAbsolutePath());
+            long outputSize = outputFile.length();
             
-            System.out.println("\n[output] Kompresi berhasil! Hasil disimpan di:");
+            // ------ Output ------
+            System.out.println("\n[output] Kompresi berhasil!\n");
+            System.out.println("[output] Waktu eksekusi         : " + duration.toMillis() + " ms");
+            System.out.println("[output] Ukuran gambar sebelum  : " + inputSize);
+            System.out.println("[output] Ukuran gambar setelah  : " + outputSize);
+            System.out.println("[output] Persentase kompresi    : " + (1-(inputSize/outputSize))*100 + " %");
+            System.out.println("[output] Kedalaman pohon        : " + root.totalDepth());
+            System.out.println("[output] Banyak simpul pohon    : " + root.totalNode());
+            System.out.println("\n[output] Gambar hasil kompresi:");
             System.out.println("\t " + outputFile.getAbsolutePath());
             System.out.println("\n[======================================================================]\n");
 
