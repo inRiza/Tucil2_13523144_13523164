@@ -26,36 +26,8 @@ public class ImageProcessor {
         if (node.width <= minBlockSize || node.height <= minBlockSize) {
             return false;
         }
-        double error = calculateVariance(node, image);
+        double error = ErrorMeasurement.Variance(node, image);
         return error > threshold;
-    }
-
-    private double calculateVariance(QuadTreeNode node, BufferedImage image) {
-        double sumR = 0, sumG = 0, sumB = 0;
-        double sumSqR = 0, sumSqG = 0, sumSqB = 0;
-        int pixelCount = node.width * node.height;
-
-        for (int y = node.y; y < Math.min(node.y + node.height, image.getHeight()); y++) {
-            for (int x = node.x; x < Math.min(node.x + node.width, image.getWidth()); x++) {
-                int rgb = image.getRGB(x, y);
-                int r = (rgb >> 16) & 0xFF;
-                int g = (rgb >> 8) & 0xFF;
-                int b = rgb & 0xFF;
-
-                sumR += r;
-                sumG += g;
-                sumB += b;
-                sumSqR += r * r;
-                sumSqG += g * g;
-                sumSqB += b * b;
-            }
-        }
-
-        double varianceR = (sumSqR - (sumR * sumR) / pixelCount) / pixelCount;
-        double varianceG = (sumSqG - (sumG * sumG) / pixelCount) / pixelCount;
-        double varianceB = (sumSqB - (sumB * sumB) / pixelCount) / pixelCount;
-
-        return (varianceR + varianceG + varianceB) / 3;
     }
 
     private void calculateAverageColor(QuadTreeNode node, BufferedImage image) {
