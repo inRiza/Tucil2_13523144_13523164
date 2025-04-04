@@ -9,16 +9,31 @@ import javax.imageio.ImageIO;
 import javax.imageio.stream.FileImageOutputStream;
 import javax.imageio.stream.ImageOutputStream;
 
-public class GIFGenerator {
-    private List<BufferedImage> frames = new ArrayList<>();
-    private List<Integer> delays = new ArrayList<>();
+public class GIFGenerator implements AutoCloseable {
+    private File tempDir;
+    private List<String> tempFiles;
+    private List<Integer> delays;
     private int defaultDelayMs;
+    private int frameCount;
 
     public GIFGenerator(int defaultDelayMs) {
         if (defaultDelayMs <= 0) {
             throw new IllegalArgumentException("Delay must be positive");
         }
         this.defaultDelayMs = defaultDelayMs;
+        this.tempFiles = new ArrayList<>();
+        this.delays = new ArrayList<>();
+        this.frameCount = 0;
+
+        // Create temporary directory
+        try {
+            this.tempDir = new File(System.getProperty("java.io.tmpdir"), "quadtree_gif_" + System.currentTimeMillis());
+            if (!this.tempDir.mkdirs()) {
+                throw new IOException("Failed to create temporary directory");
+            }
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to initialize GIF generator", e);
+        }
     }
 
     public void addFrame(BufferedImage image) {
@@ -29,12 +44,21 @@ public class GIFGenerator {
         if (image == null) {
             throw new IllegalArgumentException("Image cannot be null");
         }
-        frames.add(copyImage(image));
-        delays.add(Math.max(1, customDelayMs / 10)); // Minimum 1/100th second
+
+        try {
+            // Save frame to temporary file
+            String tempFileName = String.format("frame_%05d.png", frameCount++);
+            File tempFile = new File(tempDir, tempFileName);
+            ImageIO.write(image, "png", tempFile);
+            tempFiles.add(tempFile.getAbsolutePath());
+            delays.add(Math.max(1, customDelayMs / 10)); // Minimum 1/100th second
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to save frame", e);
+        }
     }
 
     public void saveGIF(String outputPath) throws IOException {
-        if (frames.isEmpty()) {
+        if (tempFiles.isEmpty()) {
             throw new IllegalStateException("No frames to save");
         }
 
@@ -51,50 +75,39 @@ public class GIFGenerator {
                 }
             }
 
-            output = new FileImageOutputStream(outputFile);
-            if (output == null) {
-                throw new IOException("Failed to create output stream for: " + outputPath);
-            }
+            // Read first frame to get image type
+            BufferedImage firstFrame = ImageIO.read(new File(tempFiles.get(0)));
 
-            writer = new GifSequenceWriter(
-                    output,
-                    frames.get(0).getType(),
-                    delays.get(0),
-                    true);
+            output = new FileImageOutputStream(outputFile);
+            writer = new GifSequenceWriter(output, firstFrame.getType(), delays.get(0), true);
 
             // Write first frame
-            writer.writeToSequence(frames.get(0));
+            writer.writeToSequence(firstFrame);
 
             // Write remaining frames
-            for (int i = 1; i < frames.size(); i++) {
+            for (int i = 1; i < tempFiles.size(); i++) {
+                BufferedImage frame = ImageIO.read(new File(tempFiles.get(i)));
                 writer.setDelay(delays.get(i));
-                writer.writeToSequence(frames.get(i));
+                writer.writeToSequence(frame);
             }
         } finally {
-            // Close resources in reverse order
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (IOException e) {
-                    System.err.println("Warning: Error closing GifSequenceWriter: " + e.getMessage());
-                }
-            }
-            if (output != null) {
-                try {
-                    output.close();
-                } catch (IOException e) {
-                    System.err.println("Warning: Error closing ImageOutputStream: " + e.getMessage());
-                }
-            }
+            // Close resources
+            if (writer != null)
+                writer.close();
+            if (output != null)
+                output.close();
         }
     }
 
-    private BufferedImage copyImage(BufferedImage source) {
-        BufferedImage copy = new BufferedImage(
-                source.getWidth(),
-                source.getHeight(),
-                BufferedImage.TYPE_INT_RGB);
-        copy.getGraphics().drawImage(source, 0, 0, null);
-        return copy;
+    @Override
+    public void close() {
+        cleanupTempFiles();
+    }
+
+    private void cleanupTempFiles() {
+        for (String tempFile : tempFiles) {
+            new File(tempFile).delete();
+        }
+        tempDir.delete();
     }
 }
