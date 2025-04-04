@@ -25,9 +25,8 @@ public class Main {
             File inputFile = new File(filename);
             long inputSize = inputFile.length();
 
-            // Validasi file exist
-            if (!inputFile.exists()) {
-                System.err.println("[Error] File tidak ditemukan di " + inputFile.getAbsolutePath());
+            // Validasi file exist dan path
+            if (!validateInputFile(inputFile)) {
                 return;
             }
 
@@ -37,7 +36,14 @@ public class Main {
             int minBlockSize = getMinBlockSize(scanner);
 
             // 3. Proses gambar
-            BufferedImage image = ImageUtils.readImage(inputFile.getAbsolutePath());
+            BufferedImage image = null;
+            try {
+                image = ImageUtils.readImage(inputFile.getAbsolutePath());
+            } catch (IOException e) {
+                System.err.println("[Error] Image path tidak terdeteksi oleh sistem");
+                System.err.println("Detail: " + e.getMessage());
+                return;
+            }
 
             // Buat nama output otomatis
             String outputDirPath = getOutputDirectory(scanner);
@@ -58,6 +64,32 @@ public class Main {
         } finally {
             scanner.close();
         }
+    }
+
+    private static boolean validateInputFile(File inputFile) {
+        if (!inputFile.exists()) {
+            System.err.println("[Error] File tidak ditemukan di " + inputFile.getAbsolutePath());
+            return false;
+        }
+
+        if (!inputFile.isFile()) {
+            System.err.println("[Error] Path yang diberikan bukan merupakan file: " + inputFile.getAbsolutePath());
+            return false;
+        }
+
+        if (!inputFile.canRead()) {
+            System.err.println("[Error] File tidak dapat dibaca: " + inputFile.getAbsolutePath());
+            return false;
+        }
+
+        // Validasi ekstensi file
+        String fileName = inputFile.getName().toLowerCase();
+        if (!fileName.endsWith(".jpg") && !fileName.endsWith(".jpeg") && !fileName.endsWith(".png")) {
+            System.err.println("[Error] Format file tidak didukung. Gunakan format JPG, JPEG, atau PNG");
+            return false;
+        }
+
+        return true;
     }
 
     private static void clearTerminal() {
@@ -120,21 +152,31 @@ public class Main {
 
     private static boolean validateAndCreateOutputDirectory(File outputFile, Scanner scanner) {
         File outputDir = outputFile.getParentFile();
-        if (outputDir != null && !outputDir.exists()) {
-            System.out.println(
-                    "Sepertinya alamat absolut untuk penyimpanan proses gambar yang diberikan belum ada, maukah saya buatkan alamat absolutnya?(y/n)");
-            String response = scanner.nextLine().toLowerCase();
-            if (response.equals("y")) {
-                if (outputDir.mkdirs()) {
+        if (outputDir != null) {
+            if (!outputDir.exists()) {
+                System.out.println(
+                        "Sepertinya alamat absolut untuk penyimpanan proses gambar yang diberikan belum ada, maukah saya buatkan alamat absolutnya?(y/n)");
+                String response = scanner.nextLine().toLowerCase();
+                if (response.equals("y")) {
+                    if (!outputDir.mkdirs()) {
+                        System.err.println("[Error] Gagal membuat direktori output: " + outputDir.getAbsolutePath());
+                        return false;
+                    }
                     System.out.println("Berhasil membuat tempat penyimpanan");
                 } else {
                     System.out.println("Gagal menyimpan gambar");
                     return false;
                 }
-            } else {
-                System.out.println("Gagal menyimpan gambar");
+            }
+
+            if (!outputDir.canWrite()) {
+                System.err.println(
+                        "[Error] Tidak memiliki izin untuk menulis ke direktori: " + outputDir.getAbsolutePath());
                 return false;
             }
+        } else {
+            System.err.println("[Error] Path output tidak valid");
+            return false;
         }
         return true;
     }
@@ -226,8 +268,8 @@ public class Main {
             ImageUtils.saveImage(finalCompressed, absoluteOutputPath);
             System.out.println("[Debug] File berhasil disimpan");
         } catch (IOException e) {
-            System.err.println("[Error] Gagal menyimpan gambar: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("[Error] Image path tidak terdeteksi oleh sistem");
+            System.err.println("Detail: " + e.getMessage());
             return;
         }
 
@@ -294,8 +336,8 @@ public class Main {
                 System.out.println("\t" + gifFile.getAbsolutePath());
 
             } catch (IOException e) {
-                System.err.println("[Error] Failed to save GIF:");
-                e.printStackTrace();
+                System.err.println("[Error] Image path tidak terdeteksi oleh sistem");
+                System.err.println("Detail: " + e.getMessage());
 
                 // Debug info
                 System.err.println("Debug Info:");
