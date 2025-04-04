@@ -23,33 +23,24 @@ public class ImageProcessor {
             double threshold, int minBlockSize, int method,
             CompressionCallback callback, int depth) {
 
-        // Panggil callback sebelum memproses node
-        if (callback != null) {
-            callback.onNodeProcessed(node, image, depth, false);
-        }
-
         if (shouldSplit(node, image, threshold, minBlockSize, method)) {
-            splitNode(node);
-
-            // Panggil callback setelah split (sebelum proses child)
-            if (callback != null) {
+            // Only capture frame for significant splits
+            if (callback != null && (depth <= 3 || depth % 4 == 0)) {
                 callback.onNodeProcessed(node, image, depth, false);
             }
 
-            // Proses setiap child node
+            splitNode(node);
+
+            // Process each child node
             for (QuadTreeNode child : node.children) {
                 compress(child, image, threshold, minBlockSize, method, callback, depth + 1);
             }
 
-            // Panggil callback setelah semua child diproses
-            if (callback != null) {
-                callback.onNodeProcessed(node, image, depth, false);
-            }
         } else {
             calculateAverageColor(node, image);
 
-            // Panggil callback untuk leaf node
-            if (callback != null) {
+            // Only capture leaf nodes at very shallow depths
+            if (callback != null && depth <= 3) {
                 callback.onNodeProcessed(node, image, depth, true);
             }
         }
@@ -100,14 +91,15 @@ public class ImageProcessor {
         long sumR = 0, sumG = 0, sumB = 0;
         int pixelCount = 0;
 
-        for (int y = node.y; y < Math.min(node.y + node.height, image.getHeight()); y++) {
-            for (int x = node.x; x < Math.min(node.x + node.width, image.getWidth()); x++) {
-                int rgb = image.getRGB(x, y);
-                sumR += (rgb >> 16) & 0xFF;
-                sumG += (rgb >> 8) & 0xFF;
-                sumB += rgb & 0xFF;
-                pixelCount++;
-            }
+        // Optimize by using direct pixel access
+        int[] pixels = new int[node.width * node.height];
+        image.getRGB(node.x, node.y, node.width, node.height, pixels, 0, node.width);
+
+        for (int pixel : pixels) {
+            sumR += (pixel >> 16) & 0xFF;
+            sumG += (pixel >> 8) & 0xFF;
+            sumB += pixel & 0xFF;
+            pixelCount++;
         }
 
         if (pixelCount > 0) {
