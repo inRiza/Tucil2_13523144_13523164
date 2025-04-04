@@ -11,11 +11,11 @@ public class ImageUtils {
     public static BufferedImage readImage(String filePath) throws IOException {
         File file = new File(filePath);
         if (!file.exists()) {
-            throw new IOException("File not found: " + filePath);
+            throw new IOException("File tidak ditemukan: " + filePath);
         }
         BufferedImage image = ImageIO.read(file);
         if (image == null) {
-            throw new IOException("Unsupported image format: " + filePath);
+            throw new IOException("Format gambar tidak didukung: " + filePath);
         }
         return image;
     }
@@ -23,7 +23,7 @@ public class ImageUtils {
     public static void saveImage(BufferedImage image, String outputPath) throws IOException {
         String format = outputPath.substring(outputPath.lastIndexOf(".") + 1).toLowerCase();
         if (!ImageIO.write(image, format, new File(outputPath))) {
-            throw new IOException("No writer found for format: " + format);
+            throw new IOException("Tidak ditemukan writer untuk format: " + format);
         }
     }
 
@@ -120,6 +120,31 @@ public class ImageUtils {
             g.drawRect(node.x, node.y, node.width - 1, node.height - 1);
             for (QuadTreeNode child : node.children) {
                 drawTreeBoundaries(g, child, color, depth + 1);
+            }
+        }
+    }
+
+    // Method untuk menggambar state quadtree
+    public static void drawQuadTreeState(Graphics2D g, QuadTreeNode node, int currentDepth, int maxDepth) {
+        if (node == null || currentDepth > maxDepth)
+            return;
+
+        // Set warna berdasarkan kedalaman (memastikan nilai tetap dalam range 0-255)
+        int red = Math.max(0, Math.min(255, 255 - currentDepth * 30));
+        int green = Math.max(0, Math.min(255, 100 + currentDepth * 20));
+        int blue = Math.max(0, Math.min(255, 100 + currentDepth * 20));
+
+        Color color = new Color(red, green, blue);
+
+        // Gambar batas node
+        g.setColor(color);
+        g.setStroke(new BasicStroke(1));
+        g.drawRect(node.x, node.y, node.width - 1, node.height - 1);
+
+        // Gambar anak secara rekursif
+        if (!node.isLeaf()) {
+            for (QuadTreeNode child : node.children) {
+                drawQuadTreeState(g, child, currentDepth + 1, maxDepth);
             }
         }
     }
