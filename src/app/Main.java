@@ -111,8 +111,8 @@ public class Main {
 
     private static int getCompressionMethod(Scanner scanner) {
         System.out.println("\n[input] Pilih metode error: ");
-        System.out.println("\t1. Variance\n\t2. MAD\n\t3. Max Pixel Difference\n\t4. Entropy");
-        System.out.print(">> Pilihan (1-4): ");
+        System.out.println("\t1. Variance\n\t2. MAD\n\t3. Max Pixel Difference\n\t4. Entropy\n\t5. SSIM");
+        System.out.print(">> Pilihan (1-5): ");
         return scanner.nextInt();
     }
 
