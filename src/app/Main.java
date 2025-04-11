@@ -32,15 +32,9 @@ public class Main {
 
             // 2. Input parameter kompresi
             int method = getCompressionMethod(scanner);
+            double threshold = getThreshold(scanner);
+            int minBlockSize = getMinBlockSize(scanner);
             double targetCompression = getTargetCompression(scanner);
-            double threshold; int minBlockSize;
-            if (targetCompression == 0) {
-                threshold = getThreshold(scanner);
-                minBlockSize = getMinBlockSize(scanner);
-            } else {
-                threshold = 0;
-                minBlockSize = 0;
-            }
 
             // 3. Proses gambar
             BufferedImage image = null;
