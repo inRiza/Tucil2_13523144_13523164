@@ -49,12 +49,12 @@ public class Main {
             String outputDirPath = getOutputDirectory(scanner);
             String outputFilename = generateOutputFilename(inputFile, outputDirPath);
             File outputFile = new File(outputFilename);
-
+            
             // Validasi dan buat direktori output
             if (!validateAndCreateOutputDirectory(outputFile, scanner)) {
                 return;
             }
-
+            
             // Proses kompresi dan generate GIF
             processCompressionAndGenerateGIF(image, outputFile, inputSize, method, threshold, minBlockSize, scanner);
 
@@ -127,7 +127,7 @@ public class Main {
     }
 
     private static String getOutputDirectory(Scanner scanner) {
-        System.out.print("\n[input] Masukkan alamat absolut output gambar \n>> ");
+        System.out.print("\n[input] Masukkan alamat absolut folder output gambar \n>> ");
         scanner.nextLine();
         return scanner.nextLine();
     }
@@ -280,7 +280,7 @@ public class Main {
         }
 
         // Tampilkan hasil
-        displayResults(duration, inputSize, outputSize, root, absoluteOutputPath);
+        displayResults(duration, inputSize, outputFile.length(), root, absoluteOutputPath);
 
         // Tanya user apakah ingin menyimpan sebagai GIF
         handleGIFGeneration(outputFile, scanner, gifGen);
