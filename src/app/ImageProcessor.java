@@ -10,18 +10,34 @@ public class ImageProcessor {
 
     public void compress(QuadTreeNode node, BufferedImage image,
             double threshold, int minBlockSize, int method) {
-        compress(node, image, threshold, minBlockSize, method, null, 0);
+        compress(node, image, threshold, minBlockSize, method, null, 0, 0.0);
     }
 
     public void compress(QuadTreeNode node, BufferedImage image,
             double threshold, int minBlockSize, int method,
             CompressionCallback callback) {
-        compress(node, image, threshold, minBlockSize, method, callback, 0);
+        compress(node, image, threshold, minBlockSize, method, callback, 0, 0.0);
+    }
+
+    public void compress(QuadTreeNode node, BufferedImage image,
+            double threshold, int minBlockSize, int method,
+            CompressionCallback callback, double targetCompression) {
+        compress(node, image, threshold, minBlockSize, method, callback, 0, targetCompression);
     }
 
     private void compress(QuadTreeNode node, BufferedImage image,
             double threshold, int minBlockSize, int method,
-            CompressionCallback callback, int depth) {
+            CompressionCallback callback, int depth, double targetCompression) {
+
+        if (targetCompression > 0) {
+            // Dynamic threshold adjustment
+            double currentCompression = calculateCompressionRatio(node);
+            if (currentCompression < targetCompression) {
+                threshold *= 0.9; // Decrease threshold to increase compression
+            } else if (currentCompression > targetCompression) {
+                threshold *= 1.1; // Increase threshold to decrease compression
+            }
+        }
 
         if (shouldSplit(node, image, threshold, minBlockSize, method)) {
             // Only capture frame for significant splits
@@ -33,7 +49,7 @@ public class ImageProcessor {
 
             // Process each child node
             for (QuadTreeNode child : node.children) {
-                compress(child, image, threshold, minBlockSize, method, callback, depth + 1);
+                compress(child, image, threshold, minBlockSize, method, callback, depth + 1, targetCompression);
             }
 
         } else {
@@ -107,6 +123,23 @@ public class ImageProcessor {
             node.g = (int) (sumG / pixelCount);
             node.b = (int) (sumB / pixelCount);
         }
+    }
+
+    private double calculateCompressionRatio(QuadTreeNode node) {
+        int totalPixels = node.width * node.height;
+        int leafNodes = countLeafNodes(node);
+        return (double) leafNodes / totalPixels;
+    }
+
+    private int countLeafNodes(QuadTreeNode node) {
+        if (node.isLeaf()) {
+            return 1;
+        }
+        int count = 0;
+        for (QuadTreeNode child : node.children) {
+            count += countLeafNodes(child);
+        }
+        return count;
     }
 
     // Utility untuk mendapatkan warna berdasarkan kedalaman

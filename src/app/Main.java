@@ -33,6 +33,7 @@ public class Main {
             // 2. Input parameter kompresi
             int method = getCompressionMethod(scanner);
             double threshold = getThreshold(scanner);
+            double targetCompression = getTargetCompression(scanner);
             int minBlockSize = getMinBlockSize(scanner);
 
             // 3. Proses gambar
@@ -56,7 +57,8 @@ public class Main {
             }
 
             // Proses kompresi dan generate GIF
-            processCompressionAndGenerateGIF(image, outputFile, inputSize, method, threshold, minBlockSize, scanner);
+            processCompressionAndGenerateGIF(image, outputFile, inputSize, method, threshold, minBlockSize, scanner,
+                    targetCompression);
 
         } catch (Exception e) {
             System.err.println("[Error] " + e.getMessage());
@@ -111,8 +113,8 @@ public class Main {
 
     private static int getCompressionMethod(Scanner scanner) {
         System.out.println("\n[input] Pilih metode error: ");
-        System.out.println("\t1. Variance\n\t2. MAD\n\t3. Max Pixel Difference\n\t4. Entropy");
-        System.out.print(">> Pilihan (1-4): ");
+        System.out.println("\t1. Variance\n\t2. MAD\n\t3. Max Pixel Difference\n\t4. Entropy\n\t5. SSIM");
+        System.out.print(">> Pilihan (1-5): ");
         return scanner.nextInt();
     }
 
@@ -121,15 +123,32 @@ public class Main {
         return scanner.nextDouble();
     }
 
+    private static double getTargetCompression(Scanner scanner) {
+        System.out.print("\n[input] Masukkan target persentase kompresi (0.0 - 1.0, 0 untuk nonaktif) \n>> ");
+        double target = scanner.nextDouble();
+        scanner.nextLine(); // Consume the newline
+        if (target < 0 || target > 1) {
+            System.out.println("[Warning] Target kompresi tidak valid, menggunakan 0 (nonaktif)");
+            return 0.0;
+        }
+        return target;
+    }
+
     private static int getMinBlockSize(Scanner scanner) {
         System.out.print("\n[input] Masukkan Ukuran blok minimum (contoh: 4) \n>> ");
-        return scanner.nextInt();
+        int size = scanner.nextInt();
+        scanner.nextLine(); // Consume the newline
+        return size;
     }
 
     private static String getOutputDirectory(Scanner scanner) {
         System.out.print("\n[input] Masukkan alamat absolut output gambar \n>> ");
-        scanner.nextLine();
-        return scanner.nextLine();
+        String input = scanner.nextLine().trim();
+        while (input.isEmpty()) {
+            System.out.print(">> ");
+            input = scanner.nextLine().trim();
+        }
+        return input;
     }
 
     private static String generateOutputFilename(File inputFile, String outputDirPath) {
@@ -156,7 +175,11 @@ public class Main {
             if (!outputDir.exists()) {
                 System.out.println(
                         "Sepertinya alamat absolut untuk penyimpanan proses gambar yang diberikan belum ada, maukah saya buatkan alamat absolutnya?(y/n)");
-                String response = scanner.nextLine().toLowerCase();
+                String response = scanner.nextLine().trim().toLowerCase();
+                while (!response.equals("y") && !response.equals("n")) {
+                    System.out.print("Masukkan y atau n: ");
+                    response = scanner.nextLine().trim().toLowerCase();
+                }
                 if (response.equals("y")) {
                     if (!outputDir.mkdirs()) {
                         System.err.println("[Error] Gagal membuat direktori output: " + outputDir.getAbsolutePath());
@@ -182,11 +205,16 @@ public class Main {
     }
 
     private static void processCompressionAndGenerateGIF(BufferedImage image, File outputFile, long inputSize,
-            int method, double threshold, int minBlockSize, Scanner scanner) throws IOException {
+            int method, double threshold, int minBlockSize, Scanner scanner, double targetCompression)
+            throws IOException {
         // Inisialisasi GIF Generator dengan frame rate lebih cepat
+        System.out.println("\n[Status] Memulai proses kompresi...");
+        System.out.flush();
         GIFGenerator gifGen = new GIFGenerator(50); // Frame rate lebih cepat
 
         // Proses kompresi
+        System.out.println("[Status] Membuat frame awal...");
+        System.out.flush();
         Instant startTime = Instant.now();
         QuadTreeNode root = new QuadTreeNode(0, 0, image.getWidth(), image.getHeight());
 
@@ -200,6 +228,8 @@ public class Main {
         g2d.dispose();
         gifGen.addFrame(initialFrame, 200); // Kurangi delay frame awal
 
+        System.out.println("[Status] Memulai proses kompresi gambar...");
+        System.out.flush();
         // Proses kompresi dengan visualisasi
         new ImageProcessor().compress(root, image, threshold, minBlockSize, method,
                 (node, img, depth, isLeaf) -> {
@@ -224,8 +254,10 @@ public class Main {
                         gifGen.addFrame(frame, 50); // Kurangi delay antar frame
                         frame.flush();
                     }
-                });
+                }, targetCompression);
 
+        System.out.println("[Status] Membuat frame akhir...");
+        System.out.flush();
         // Tambah frame akhir
         BufferedImage finalFrame = new BufferedImage(
                 image.getWidth(),
@@ -246,14 +278,17 @@ public class Main {
         Instant endTime = Instant.now();
         Duration duration = Duration.between(startTime, endTime);
 
-        // Simpan hasil
+        System.out.println("[Status] Menyimpan hasil kompresi...");
+        System.out.flush();
+        // Simpan hasil hanya sekali
         saveResults(outputFile, finalCompressed, inputSize, outputFile.length(), root, duration, scanner, gifGen);
     }
 
     private static void saveResults(File outputFile, BufferedImage finalCompressed, long inputSize, long outputSize,
             QuadTreeNode root, Duration duration, Scanner scanner, GIFGenerator gifGen) throws IOException {
         String absoluteOutputPath = outputFile.getAbsolutePath();
-        System.out.println("\n[Debug] Mencoba menyimpan ke: " + absoluteOutputPath);
+        System.out.println("\n[Status] Mencoba menyimpan ke: " + absoluteOutputPath);
+        System.out.flush();
 
         // Pastikan direktori output ada dan bisa ditulis
         File outputDir = outputFile.getParentFile();
@@ -265,44 +300,74 @@ public class Main {
 
         // Simpan gambar kompresi
         try {
+            System.out.println("[Status] Menyimpan gambar hasil kompresi...");
+            System.out.flush();
+
+            // Pastikan direktori output ada
+            if (!outputDir.exists()) {
+                if (!outputDir.mkdirs()) {
+                    System.err.println("[Error] Gagal membuat direktori output: " + outputDir.getAbsolutePath());
+                    return;
+                }
+            }
+
+            // Simpan file
             ImageUtils.saveImage(finalCompressed, absoluteOutputPath);
-            System.out.println("[Debug] File berhasil disimpan");
+
+            // Verifikasi file tersimpan
+            if (!outputFile.exists()) {
+                System.err.println("[Error] File tidak berhasil disimpan di " + absoluteOutputPath);
+                return;
+            }
+
+            // Verifikasi ukuran file
+            long actualFileSize = outputFile.length();
+            if (actualFileSize == 0) {
+                System.err.println("[Error] File berhasil dibuat tapi kosong: " + absoluteOutputPath);
+                return;
+            }
+
+            System.out.println("[Status] File berhasil disimpan");
+            System.out.println("[Status] Ukuran file: " + actualFileSize + " bytes");
+            System.out.flush();
+
+            // Tampilkan hasil hanya sekali
+            displayResults(duration, inputSize, actualFileSize, root, absoluteOutputPath);
+
+            // Tanya user apakah ingin menyimpan sebagai GIF
+            handleGIFGeneration(outputFile, scanner, gifGen);
+
         } catch (IOException e) {
-            System.err.println("[Error] Image path tidak terdeteksi oleh sistem");
+            System.err.println("[Error] Gagal menyimpan file");
             System.err.println("Detail: " + e.getMessage());
-            return;
+            e.printStackTrace();
         }
-
-        // Verifikasi file tersimpan
-        if (!outputFile.exists()) {
-            System.err.println("[Error] File tidak berhasil disimpan di " + absoluteOutputPath);
-            return;
-        }
-
-        // Tampilkan hasil
-        displayResults(duration, inputSize, outputSize, root, absoluteOutputPath);
-
-        // Tanya user apakah ingin menyimpan sebagai GIF
-        handleGIFGeneration(outputFile, scanner, gifGen);
     }
 
     private static void displayResults(Duration duration, long inputSize, long outputSize, QuadTreeNode root,
             String absoluteOutputPath) {
         System.out.println("\n[output] Kompresi berhasil!\n");
         System.out.println("[output] Waktu eksekusi         : " + duration.toMillis() + " ms");
-        System.out.println("[output] Ukuran gambar sebelum  : " + inputSize);
-        System.out.println("[output] Ukuran gambar setelah  : " + outputSize);
+        System.out.println("[output] Ukuran gambar sebelum  : " + inputSize + " bytes");
+        System.out.println("[output] Ukuran gambar setelah  : " + outputSize + " bytes");
         System.out.printf("[output] Persentase kompresi    : %.2f %%\n",
                 (1 - ((double) outputSize / inputSize)) * 100);
         System.out.println("[output] Kedalaman pohon        : " + root.totalDepth());
         System.out.println("[output] Banyak simpul pohon    : " + root.totalNode());
         System.out.println("\n[output] Gambar hasil kompresi:");
         System.out.println("\t " + absoluteOutputPath);
+        System.out.println("\n[output] File berhasil disimpan dan dapat diakses di alamat di atas");
+        System.out.flush();
     }
 
     private static void handleGIFGeneration(File outputFile, Scanner scanner, GIFGenerator gifGen) throws IOException {
         System.out.print("\n[input] Maukah anda menyimpan proses kompresi sebagai GIF? (y/n)\n>> ");
-        String saveGifResponse = scanner.nextLine().toLowerCase();
+        System.out.flush();
+        String saveGifResponse = scanner.nextLine().trim().toLowerCase();
+        while (!saveGifResponse.equals("y") && !saveGifResponse.equals("n")) {
+            System.out.print("Masukkan y atau n: ");
+            saveGifResponse = scanner.nextLine().trim().toLowerCase();
+        }
 
         if (saveGifResponse.equals("y")) {
             try {
@@ -323,30 +388,21 @@ public class Main {
                     }
                 }
 
-                // Coba buat file kosong dulu
-                if (!gifFile.createNewFile()) {
-                    System.err.println(
-                            "[Error] File already exists or cannot be created: " + gifFile.getAbsolutePath());
-                    return;
-                }
-
+                System.out.println("\n[Status] Memulai proses pembuatan GIF...");
+                System.out.flush();
                 // Simpan GIF
                 gifGen.saveGIF(gifFile.getAbsolutePath());
                 System.out.println("\n[output] GIF successfully saved to:");
                 System.out.println("\t" + gifFile.getAbsolutePath());
+                System.out.flush();
 
             } catch (IOException e) {
-                System.err.println("[Error] Image path tidak terdeteksi oleh sistem");
+                System.err.println("[Error] Gagal menyimpan GIF");
                 System.err.println("Detail: " + e.getMessage());
-
-                // Debug info
-                System.err.println("Debug Info:");
-                System.err.println("Directory exists: " + new File(outputFile.getParent()).exists());
-                System.err.println("Directory writable: " + new File(outputFile.getParent()).canWrite());
-                System.err.println("Free space: " + new File(outputFile.getParent()).getFreeSpace() + " bytes");
             }
         }
 
         System.out.println("\n[======================================================================]\n");
+        System.out.flush();
     }
 }
