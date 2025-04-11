@@ -33,8 +33,8 @@ public class Main {
             // 2. Input parameter kompresi
             int method = getCompressionMethod(scanner);
             double threshold = getThreshold(scanner);
-            int minBlockSize = getMinBlockSize(scanner);
             double targetCompression = getTargetCompression(scanner);
+            int minBlockSize = getMinBlockSize(scanner);
 
             // 3. Proses gambar
             BufferedImage image = null;
@@ -50,12 +50,12 @@ public class Main {
             String outputDirPath = getOutputDirectory(scanner);
             String outputFilename = generateOutputFilename(inputFile, outputDirPath);
             File outputFile = new File(outputFilename);
-            
+
             // Validasi dan buat direktori output
             if (!validateAndCreateOutputDirectory(outputFile, scanner)) {
                 return;
             }
-            
+
             // Proses kompresi dan generate GIF
             processCompressionAndGenerateGIF(image, outputFile, inputSize, method, threshold, minBlockSize, scanner,
                     targetCompression);
@@ -142,7 +142,7 @@ public class Main {
     }
 
     private static String getOutputDirectory(Scanner scanner) {
-        System.out.print("\n[input] Masukkan alamat absolut folder output \n>> ");
+        System.out.print("\n[input] Masukkan alamat absolut folder output\n>> ");
         String input = scanner.nextLine().trim();
         while (input.isEmpty()) {
             System.out.print(">> ");
