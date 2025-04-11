@@ -142,7 +142,7 @@ public class Main {
     }
 
     private static String getOutputDirectory(Scanner scanner) {
-        System.out.print("\n[input] Masukkan alamat absolut output gambar \n>> ");
+        System.out.print("\n[input] Masukkan alamat absolut folder output \n>> ");
         String input = scanner.nextLine().trim();
         while (input.isEmpty()) {
             System.out.print(">> ");
